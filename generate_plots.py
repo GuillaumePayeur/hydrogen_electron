@@ -54,8 +54,7 @@ def make_plot(samples):
     z = R*np.cos(theta)
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
-    ax.scatter(x,y,z,s=1,c='red',alpha=0.5)
-    ax.scatter(0,0,0,s=100,c='black')
+    ax.scatter(x,y,z,s=1,c=R,alpha=0.5,cmap='hot')
     plt.show()
 
 # Function for plotting electron density given quantum numbers
@@ -71,5 +70,5 @@ if __name__ == '__main__':
     n = 3
     l = 2
     m = 0
-    num_samples = 5000
+    num_samples = 10000
     plot(n,l,m,num_samples)
