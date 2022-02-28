@@ -1,11 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import sph_harm
+from emcee import EnsembleSampler
 
 # Function for getting the spherical harmonic Y_lm
 def spherical_harmonic(l,m):
     def Y_lm(theta,phi):
-        return sph_harm(m,l,theta,phi)
+        return sph_harm(m,l,phi,theta)
     return Y_lm
 
 # Function for getting Laguerre polynomial coefficients for quantum numbers n,l
@@ -18,43 +19,57 @@ def laguerre(n,l):
     def F(r):
         total = 0
         for order in range(coeffs.shape[0]):
-            total += r**order
-        total = total*(r**(l+1)*np.e**(-r/2))
+            total += coeffs[order]*r**order
+        total = total*(r**(l)*np.e**(-r/2))
         return total
     return F
 
-# Function to normalize a wave function
-def normalize(psi):
-    pass
-    # to do
-
-# Function for getting the wave function in real space for quantum numbers n,l,m
-def wave_function(n,l,m):
-    def psi(r,theta,psi):
+# Function for getting the density function in real space for quantum numbers n,l,m
+def log_density_function(n,l,m):
+    def log_density(x):
+        r,theta,psi = np.abs(x[0]),x[1],x[2]
         R = laguerre(n,l)
         Y = spherical_harmonic(l,m)
-        return R(r)*Y(theta,psi)
-    return normalize(psi)
+        return np.log(r**2*np.abs(np.sin(theta))*np.abs(R(r)*Y(theta,psi))**2+1e-10)
+    return log_density
 
 # Function for sampling from a wave function
-def sample(psi,num_samples):
-    samples = np.zeros((3,num_samples))
-    # to do
+def sample(log_density,num_samples):
+    ndim, nwalkers = 3, 100
+    p0 = np.random.randn(nwalkers, ndim)
+
+    sampler = EnsembleSampler(nwalkers, ndim, log_density)
+    sampler.run_mcmc(p0, num_samples//nwalkers)
+    samples = sampler.get_chain()
+    samples = np.transpose(samples,[2,0,1]).reshape((3,-1))
+    return samples
 
 # Function for plotting electron density given samples
 def make_plot(samples):
-    pass
-    # to do
+    R = np.abs(samples[0])
+    theta = samples[1]
+    phi = samples[2]
+    x = R*np.cos(phi)*np.sin(theta)
+    y = R*np.sin(phi)*np.sin(theta)
+    z = R*np.cos(theta)
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.scatter(x,y,z,s=1,c='red',alpha=0.5)
+    ax.scatter(0,0,0,s=100,c='black')
+    plt.show()
 
 # Function for plotting electron density given quantum numbers
 def plot(n,l,m,num_samples):
-    psi = wave_function(n,l,m)
-    samples = sample(psi,num_samples))
+    log_density = log_density_function(n,l,m)
+    r = np.random.rand(1)
+    theta = 2*np.pi*np.random.rand(1)
+    phi = np.pi*np.random.rand(1)
+    samples = sample(log_density,num_samples)
     make_plot(samples)
 
 if __name__ == '__main__':
-    n = 1
-    l = 0
+    n = 3
+    l = 2
     m = 0
-    num_samples = 1000
+    num_samples = 5000
     plot(n,l,m,num_samples)
